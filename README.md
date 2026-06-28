@@ -109,7 +109,54 @@ create table pratos (
 
 ---
 
-## Resumindo o que fazer AGORA
+## FASE 3 — Acompanhamento do pedido + Painel da Cozinha
+
+### Passo 1 — Liberar as tabelas de pedidos no Supabase
+
+No SQL Editor do Supabase, rode:
+
+```sql
+alter table pedidos enable row level security;
+alter table itens_pedido enable row level security;
+
+create policy "Inserir pedido" on pedidos for insert to anon with check (true);
+create policy "Ler pedidos" on pedidos for select to anon using (true);
+create policy "Atualizar status do pedido" on pedidos for update to anon using (true);
+
+create policy "Inserir itens do pedido" on itens_pedido for insert to anon with check (true);
+create policy "Ler itens do pedido" on itens_pedido for select to anon using (true);
+```
+
+⚠️ **Importante sobre segurança:** essas regras liberam leitura e atualização de pedidos pra qualquer
+um que tenha a chave pública do site (que já é pública por natureza). Isso é aceitável numa fase de
+teste, mas antes de operar com clientes reais o ideal é migrar pra autenticação de verdade (Supabase
+Auth) com uma conta só pra equipe da cozinha — me avise quando quiser evoluir isso.
+
+### Passo 2 — Painel da Cozinha
+
+Depois de subir esta atualização, o painel fica disponível em:
+
+```
+https://SEU-SITE.netlify.app/cozinha
+```
+
+PIN padrão de entrada: **1234** (definido no início do arquivo `src/Cozinha.jsx`, na constante
+`PIN_COZINHA` — troque por outro número antes de divulgar o link pra equipe). De novo: isso é só uma
+trava simples contra acesso por acidente, não é uma senha de verdade.
+
+No painel, cada pedido mostra os itens, cliente, telefone, endereço (se for entrega) e total, com um
+botão para avançar o status: Recebido → Preparando → Pronto → Entregue. A lista atualiza sozinha a
+cada 5 segundos.
+
+### Como o cliente acompanha o pedido
+
+Depois de fazer o pedido, o site mostra uma tela com 4 etapas (Recebido → Preparando → Pronto →
+Entregue) que atualiza automaticamente. Se a pessoa fechar a aba, ao reabrir o site nesse mesmo
+aparelho/navegador, uma barra no topo deixa continuar acompanhando.
+
+---
+
+
 
 1. Baixe a pasta `dragao-chines-site` (o zip que eu te mandei).
 2. Crie um repositório no GitHub.

@@ -205,6 +205,16 @@ function formatPreco(v) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 }
 
+// As 4 etapas pelas quais todo pedido passa, na ordem.
+const STATUS_PASSOS = [
+  { key: "pendente", label: "Recebido" },
+  { key: "preparando", label: "Preparando" },
+  { key: "pronto", label: "Pronto" },
+  { key: "entregue", label: "Entregue" },
+];
+
+const CHAVE_LOCALSTORAGE = "dragaoChines_pedidoAtivo";
+
 // Garante que todo item tenha um "id" único (usado como chave do carrinho).
 // Itens vindos do Supabase já trazem id real; os do fallback recebem um id sintético.
 function comIds(cardapio) {
@@ -305,6 +315,54 @@ export default function DragaoChinesSite() {
     observacoes: "",
   });
 
+  // ---- ACOMPANHAMENTO DO PEDIDO ----
+  // Guardamos o pedido ativo no localStorage do navegador (só nesse aparelho)
+  // pra, se a pessoa fechar a aba e voltar, continuar vendo o status.
+  useEffect(() => {
+    const salvo = localStorage.getItem(CHAVE_LOCALSTORAGE);
+    if (salvo) {
+      try {
+        const dados = JSON.parse(salvo);
+        setPedidoConfirmado(dados);
+      } catch (e) {
+        localStorage.removeItem(CHAVE_LOCALSTORAGE);
+      }
+    }
+  }, []);
+
+  // Busca o status mais recente no Supabase a cada poucos segundos,
+  // enquanto houver um pedido ativo (e ele ainda não tiver sido entregue).
+  useEffect(() => {
+    if (!supabase || !pedidoConfirmado?.idSupabase) return;
+    if (pedidoConfirmado.status === "entregue") return;
+
+    const buscarStatus = async () => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select("status")
+        .eq("id", pedidoConfirmado.idSupabase)
+        .single();
+      if (!error && data && data.status !== pedidoConfirmado.status) {
+        setPedidoConfirmado((atual) => {
+          const atualizado = { ...atual, status: data.status };
+          localStorage.setItem(CHAVE_LOCALSTORAGE, JSON.stringify(atualizado));
+          return atualizado;
+        });
+      }
+    };
+
+    buscarStatus();
+    const intervalo = setInterval(buscarStatus, 6000);
+    return () => clearInterval(intervalo);
+  }, [pedidoConfirmado?.idSupabase, pedidoConfirmado?.status]);
+
+  function fecharAcompanhamento() {
+    localStorage.removeItem(CHAVE_LOCALSTORAGE);
+    setPedidoConfirmado(null);
+    setForm({ nome: "", telefone: "", tipo: "Retirada", endereco: "", observacoes: "" });
+    setPainel("fechado");
+  }
+
   function quantidadeNoCarrinho(itemId) {
     const linha = carrinho.find((c) => c.id === itemId);
     return linha ? linha.quantidade : 0;
@@ -344,6 +402,7 @@ export default function DragaoChinesSite() {
 
     setEnviando(true);
     let numeroPedido = null;
+    let idSupabase = null;
 
     // Tenta salvar no Supabase (se estiver configurado), pra já ficar com histórico
     // de pedidos. Se falhar, o pedido aparece na tela do mesmo jeito.
@@ -364,6 +423,7 @@ export default function DragaoChinesSite() {
 
         if (!erroPedido && pedido) {
           numeroPedido = pedido.id.slice(0, 8);
+          idSupabase = pedido.id;
           if (usandoSupabase) {
             const itensParaSalvar = carrinho.map((c) => ({
               pedido_id: pedido.id,
@@ -379,10 +439,10 @@ export default function DragaoChinesSite() {
       }
     }
 
-    // (Próxima etapa: enviar automaticamente pro WhatsApp do restaurante aqui.)
-
-    setPedidoConfirmado({
+    const novoPedidoConfirmado = {
       numero: numeroPedido,
+      idSupabase,
+      status: "pendente",
       itens: [...carrinho],
       total: totalPedido,
       tipo: form.tipo,
@@ -390,16 +450,15 @@ export default function DragaoChinesSite() {
       telefone: form.telefone,
       endereco: form.endereco,
       observacoes: form.observacoes,
-    });
+    };
+
+    setPedidoConfirmado(novoPedidoConfirmado);
+    if (idSupabase) {
+      localStorage.setItem(CHAVE_LOCALSTORAGE, JSON.stringify(novoPedidoConfirmado));
+    }
     setCarrinho([]);
     setEnviando(false);
     setPainel("confirmado");
-  }
-
-  function novoPedido() {
-    setPedidoConfirmado(null);
-    setForm({ nome: "", telefone: "", tipo: "Retirada", endereco: "", observacoes: "" });
-    setPainel("fechado");
   }
 
   return (
@@ -685,6 +744,19 @@ export default function DragaoChinesSite() {
         Restaurante Dragão Chinês — protótipo de site
       </footer>
 
+      {/* BARRA DE ACOMPANHAMENTO DO PEDIDO */}
+      {pedidoConfirmado && painel === "fechado" && (
+        <button
+          onClick={() => setPainel("confirmado")}
+          className="fixed top-14 left-0 right-0 z-30 px-5 py-2.5 flex items-center justify-center gap-2 text-sm font-medium"
+          style={{ background: "#2F6F5E", color: "#F7F1E5" }}
+        >
+          Pedido {pedidoConfirmado.numero ? `#${pedidoConfirmado.numero}` : ""} ·{" "}
+          {STATUS_PASSOS.find((s) => s.key === pedidoConfirmado.status)?.label || "Recebido"}
+          <ChevronRight size={14} />
+        </button>
+      )}
+
       {/* BARRA FLUTUANTE DO CARRINHO */}
       {totalItens > 0 && painel === "fechado" && (
         <button
@@ -877,22 +949,70 @@ export default function DragaoChinesSite() {
               </div>
             )}
 
-            {/* CONFIRMAÇÃO */}
+            {/* CONFIRMAÇÃO / ACOMPANHAMENTO */}
             {painel === "confirmado" && pedidoConfirmado && (
-              <div className="p-6 text-center">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ background: "#E3EFE9" }}
-                >
-                  <CheckCircle2 size={28} style={{ color: "#2F6F5E" }} />
+              <div className="p-6">
+                <div className="flex justify-end mb-1">
+                  <button onClick={() => setPainel("fechado")} aria-label="Fechar">
+                    <X size={20} />
+                  </button>
                 </div>
-                <h3 className="font-display text-xl font-semibold">Pedido recebido!</h3>
-                <p className="text-sm mt-1" style={{ color: "#7A6F5C" }}>
-                  {pedidoConfirmado.numero
-                    ? `Pedido #${pedidoConfirmado.numero}`
-                    : "Anote os detalhes abaixo"}{" "}
-                  · {pedidoConfirmado.tipo}
-                </p>
+                <div className="text-center">
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                    style={{ background: "#E3EFE9" }}
+                  >
+                    <CheckCircle2 size={28} style={{ color: "#2F6F5E" }} />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold">
+                    {pedidoConfirmado.status === "entregue" ? "Pedido entregue!" : "Acompanhe seu pedido"}
+                  </h3>
+                  <p className="text-sm mt-1" style={{ color: "#7A6F5C" }}>
+                    {pedidoConfirmado.numero ? `Pedido #${pedidoConfirmado.numero}` : "Pedido"} ·{" "}
+                    {pedidoConfirmado.tipo}
+                  </p>
+                </div>
+
+                {/* Stepper de status */}
+                <div className="flex items-center justify-between mt-6 mb-2 px-1">
+                  {STATUS_PASSOS.map((passo, i) => {
+                    const indiceAtual = STATUS_PASSOS.findIndex((s) => s.key === pedidoConfirmado.status);
+                    const concluido = i <= indiceAtual;
+                    return (
+                      <React.Fragment key={passo.key}>
+                        <div className="flex flex-col items-center gap-1.5" style={{ width: 56 }}>
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                            style={
+                              concluido
+                                ? { background: "#2F6F5E", color: "#F7F1E5" }
+                                : { background: "#EDE4D0", color: "#9A8F7B" }
+                            }
+                          >
+                            {i + 1}
+                          </div>
+                          <span
+                            className="text-[11px] text-center leading-tight"
+                            style={{ color: concluido ? "#2F6F5E" : "#9A8F7B" }}
+                          >
+                            {passo.label}
+                          </span>
+                        </div>
+                        {i < STATUS_PASSOS.length - 1 && (
+                          <div
+                            className="flex-1 h-0.5 -mt-4"
+                            style={{ background: i < indiceAtual ? "#2F6F5E" : "#EDE4D0" }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+                {!usandoSupabase && (
+                  <p className="text-[11px] text-center mt-1" style={{ color: "#9A8F7B" }}>
+                    (Supabase ainda não conectado — status fica em "Recebido" por enquanto)
+                  </p>
+                )}
 
                 <div className="text-left mt-5 rounded-xl p-4" style={{ background: "#FFFFFF", border: "1px solid #EDE4D0" }}>
                   {pedidoConfirmado.itens.map((c) => (
@@ -912,14 +1032,14 @@ export default function DragaoChinesSite() {
                   </div>
                 </div>
 
-                <p className="text-xs mt-4" style={{ color: "#7A6F5C" }}>
+                <p className="text-xs mt-4 text-center" style={{ color: "#7A6F5C" }}>
                   Pagamento na {pedidoConfirmado.tipo === "Entrega" ? "entrega" : "retirada"}. Em breve o
                   restaurante vai te chamar no telefone <strong>{pedidoConfirmado.telefone}</strong> para
                   confirmar.
                 </p>
 
                 <button
-                  onClick={novoPedido}
+                  onClick={fecharAcompanhamento}
                   className="w-full mt-5 rounded-full py-3 text-sm font-semibold"
                   style={{ background: "#1B1714", color: "#F7F1E5" }}
                 >
