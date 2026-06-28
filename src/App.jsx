@@ -19,6 +19,13 @@ import {
   Wine,
   Cookie,
   ImageOff,
+  ShoppingCart,
+  Plus,
+  Minus,
+  X,
+  Send,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -198,6 +205,18 @@ function formatPreco(v) {
   return v.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
 }
 
+// Garante que todo item tenha um "id" único (usado como chave do carrinho).
+// Itens vindos do Supabase já trazem id real; os do fallback recebem um id sintético.
+function comIds(cardapio) {
+  return cardapio.map((cat) => ({
+    ...cat,
+    itens: cat.itens.map((item, i) => ({
+      ...item,
+      id: item.id || `${cat.categoria}-${i}`,
+    })),
+  }));
+}
+
 function DragonDivider() {
   return (
     <svg viewBox="0 0 1200 60" className="w-full h-8" preserveAspectRatio="none">
@@ -242,6 +261,7 @@ async function buscarCardapioDoSupabase() {
     itens: pratos
       .filter((p) => p.categoria_id === cat.id)
       .map((p) => ({
+        id: p.id,
         nome: p.nome,
         descricao: p.descricao || undefined,
         preco: Number(p.preco),
@@ -251,8 +271,9 @@ async function buscarCardapioDoSupabase() {
 }
 
 export default function DragaoChinesSite() {
-  const [cardapio, setCardapio] = useState(CARDAPIO_FALLBACK);
+  const [cardapio, setCardapio] = useState(() => comIds(CARDAPIO_FALLBACK));
   const [carregando, setCarregando] = useState(true);
+  const [usandoSupabase, setUsandoSupabase] = useState(false);
   const categorias = useMemo(() => cardapio.map((c) => c.categoria), [cardapio]);
   const [ativo, setAtivo] = useState(categorias[0]);
   const grupoAtivo = cardapio.find((c) => c.categoria === ativo);
@@ -260,14 +281,126 @@ export default function DragaoChinesSite() {
   useEffect(() => {
     buscarCardapioDoSupabase().then((resultado) => {
       if (resultado && resultado.length > 0) {
-        setCardapio(resultado);
+        setCardapio(comIds(resultado));
         setAtivo(resultado[0].categoria);
+        setUsandoSupabase(true);
       }
       setCarregando(false);
     });
   }, []);
 
   const telefoneDigits = "552732612717";
+
+  // ---- CARRINHO E PEDIDO ----
+  const [carrinho, setCarrinho] = useState([]); // [{ id, nome, preco, quantidade }]
+  const [painel, setPainel] = useState("fechado"); // 'fechado' | 'carrinho' | 'checkout' | 'confirmado'
+  const [enviando, setEnviando] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState("");
+  const [pedidoConfirmado, setPedidoConfirmado] = useState(null);
+  const [form, setForm] = useState({
+    nome: "",
+    telefone: "",
+    tipo: "Retirada",
+    endereco: "",
+    observacoes: "",
+  });
+
+  function quantidadeNoCarrinho(itemId) {
+    const linha = carrinho.find((c) => c.id === itemId);
+    return linha ? linha.quantidade : 0;
+  }
+
+  function adicionarAoCarrinho(item) {
+    setCarrinho((atual) => {
+      const existe = atual.find((c) => c.id === item.id);
+      if (existe) {
+        return atual.map((c) => (c.id === item.id ? { ...c, quantidade: c.quantidade + 1 } : c));
+      }
+      return [...atual, { id: item.id, nome: item.nome, preco: item.preco, quantidade: 1 }];
+    });
+  }
+
+  function alterarQuantidade(itemId, delta) {
+    setCarrinho((atual) =>
+      atual
+        .map((c) => (c.id === itemId ? { ...c, quantidade: c.quantidade + delta } : c))
+        .filter((c) => c.quantidade > 0)
+    );
+  }
+
+  const totalItens = carrinho.reduce((soma, c) => soma + c.quantidade, 0);
+  const totalPedido = carrinho.reduce((soma, c) => soma + c.quantidade * c.preco, 0);
+
+  async function enviarPedido() {
+    setErroEnvio("");
+    if (!form.nome.trim() || !form.telefone.trim()) {
+      setErroEnvio("Preencha seu nome e telefone para continuar.");
+      return;
+    }
+    if (form.tipo === "Entrega" && !form.endereco.trim()) {
+      setErroEnvio("Informe o endereço de entrega.");
+      return;
+    }
+
+    setEnviando(true);
+    let numeroPedido = null;
+
+    // Tenta salvar no Supabase (se estiver configurado), pra já ficar com histórico
+    // de pedidos. Se falhar, o pedido aparece na tela do mesmo jeito.
+    if (supabase) {
+      try {
+        const { data: pedido, error: erroPedido } = await supabase
+          .from("pedidos")
+          .insert({
+            cliente_nome: form.nome,
+            cliente_telefone: form.telefone,
+            tipo: form.tipo === "Retirada" ? "viagem" : form.tipo === "Entrega" ? "entrega" : "local",
+            endereco_entrega: form.tipo === "Entrega" ? form.endereco : null,
+            status: "pendente",
+            total: totalPedido,
+          })
+          .select()
+          .single();
+
+        if (!erroPedido && pedido) {
+          numeroPedido = pedido.id.slice(0, 8);
+          if (usandoSupabase) {
+            const itensParaSalvar = carrinho.map((c) => ({
+              pedido_id: pedido.id,
+              prato_id: c.id,
+              quantidade: c.quantidade,
+              preco_unitario: c.preco,
+            }));
+            await supabase.from("itens_pedido").insert(itensParaSalvar);
+          }
+        }
+      } catch (e) {
+        // segue o fluxo mesmo se o Supabase falhar
+      }
+    }
+
+    // (Próxima etapa: enviar automaticamente pro WhatsApp do restaurante aqui.)
+
+    setPedidoConfirmado({
+      numero: numeroPedido,
+      itens: [...carrinho],
+      total: totalPedido,
+      tipo: form.tipo,
+      nome: form.nome,
+      telefone: form.telefone,
+      endereco: form.endereco,
+      observacoes: form.observacoes,
+    });
+    setCarrinho([]);
+    setEnviando(false);
+    setPainel("confirmado");
+  }
+
+  function novoPedido() {
+    setPedidoConfirmado(null);
+    setForm({ nome: "", telefone: "", tipo: "Retirada", endereco: "", observacoes: "" });
+    setPainel("fechado");
+  }
 
   return (
     <div
@@ -402,12 +535,13 @@ export default function DragaoChinesSite() {
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              {grupoAtivo.itens.map((item, i) => {
+              {grupoAtivo.itens.map((item) => {
                 const visual = CATEGORIA_VISUAL[grupoAtivo.categoria] || defaultVisual();
                 const Icon = visual.icon;
+                const qtd = quantidadeNoCarrinho(item.id);
                 return (
                   <div
-                    key={i}
+                    key={item.id}
                     className="flex items-start gap-3 rounded-xl px-4 py-3.5"
                     style={{ background: "#FFFFFF", border: "1px solid #EDE4D0" }}
                   >
@@ -426,21 +560,44 @@ export default function DragaoChinesSite() {
                         <Icon size={22} style={{ color: visual.fg }} />
                       </div>
                     )}
-                    <div className="flex items-start justify-between gap-3 flex-1">
-                      <div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-3">
                         <p className="font-medium leading-snug">{item.nome}</p>
-                        {item.descricao && (
-                          <p className="text-xs mt-0.5" style={{ color: "#7A6F5C" }}>
-                            {item.descricao}
-                          </p>
-                        )}
+                        <span
+                          className="shrink-0 font-display text-sm font-semibold rounded-full px-2.5 py-1"
+                          style={{ background: "#FBF3DE", color: "#A8201A" }}
+                        >
+                          R$ {formatPreco(item.preco)}
+                        </span>
                       </div>
-                      <span
-                        className="shrink-0 font-display text-sm font-semibold rounded-full px-2.5 py-1"
-                        style={{ background: "#FBF3DE", color: "#A8201A" }}
-                      >
-                        R$ {formatPreco(item.preco)}
-                      </span>
+                      {item.descricao && (
+                        <p className="text-xs mt-0.5" style={{ color: "#7A6F5C" }}>
+                          {item.descricao}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-end gap-2 mt-2">
+                        {qtd > 0 && (
+                          <>
+                            <button
+                              onClick={() => alterarQuantidade(item.id, -1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center"
+                              style={{ background: "#EDE4D0", color: "#1B1714" }}
+                              aria-label={`Remover ${item.nome}`}
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-5 text-center text-sm font-semibold">{qtd}</span>
+                          </>
+                        )}
+                        <button
+                          onClick={() => adicionarAoCarrinho(item)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center"
+                          style={{ background: "#A8201A", color: "#F7F1E5" }}
+                          aria-label={`Adicionar ${item.nome}`}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -524,9 +681,255 @@ export default function DragaoChinesSite() {
         </div>
       </section>
 
-      <footer className="text-center text-xs py-6" style={{ color: "#9A8F7B" }}>
+      <footer className="text-center text-xs py-6 pb-24" style={{ color: "#9A8F7B" }}>
         Restaurante Dragão Chinês — protótipo de site
       </footer>
+
+      {/* BARRA FLUTUANTE DO CARRINHO */}
+      {totalItens > 0 && painel === "fechado" && (
+        <button
+          onClick={() => setPainel("carrinho")}
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-40 rounded-full px-5 py-3.5 flex items-center justify-between shadow-lg"
+          style={{ background: "#A8201A", color: "#F7F1E5" }}
+        >
+          <span className="flex items-center gap-2 font-medium text-sm">
+            <ShoppingCart size={18} />
+            {totalItens} {totalItens === 1 ? "item" : "itens"}
+          </span>
+          <span className="font-display font-semibold">R$ {formatPreco(totalPedido)}</span>
+        </button>
+      )}
+
+      {/* PAINEL: CARRINHO / CHECKOUT / CONFIRMAÇÃO */}
+      {painel !== "fechado" && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(27,23,20,0.55)" }}
+            onClick={() => painel !== "confirmado" && setPainel("fechado")}
+          />
+          <div
+            className="relative w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[88vh] overflow-y-auto"
+            style={{ background: "#F7F1E5" }}
+          >
+            {/* CARRINHO */}
+            {painel === "carrinho" && (
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-xl font-semibold">Seu pedido</h3>
+                  <button onClick={() => setPainel("fechado")} aria-label="Fechar">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {carrinho.length === 0 ? (
+                  <p className="text-sm text-center py-8" style={{ color: "#7A6F5C" }}>
+                    Seu carrinho está vazio.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {carrinho.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">{c.nome}</p>
+                          <p className="text-xs" style={{ color: "#7A6F5C" }}>
+                            R$ {formatPreco(c.preco)} cada
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => alterarQuantidade(c.id, -1)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center"
+                            style={{ background: "#EDE4D0" }}
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="w-5 text-center text-sm font-semibold">{c.quantidade}</span>
+                          <button
+                            onClick={() => alterarQuantidade(c.id, 1)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center"
+                            style={{ background: "#EDE4D0" }}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div
+                      className="flex items-center justify-between pt-3 mt-3"
+                      style={{ borderTop: "1px solid #EDE4D0" }}
+                    >
+                      <span className="font-medium">Total</span>
+                      <span className="font-display text-lg font-semibold" style={{ color: "#A8201A" }}>
+                        R$ {formatPreco(totalPedido)}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => setPainel("checkout")}
+                      className="w-full mt-4 rounded-full py-3 text-sm font-semibold"
+                      style={{ background: "#A8201A", color: "#F7F1E5" }}
+                    >
+                      Continuar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CHECKOUT */}
+            {painel === "checkout" && (
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <button onClick={() => setPainel("carrinho")} className="text-sm" style={{ color: "#7A6F5C" }}>
+                    ← Voltar
+                  </button>
+                  <button onClick={() => setPainel("fechado")} aria-label="Fechar">
+                    <X size={20} />
+                  </button>
+                </div>
+                <h3 className="font-display text-xl font-semibold mb-4">Finalizar pedido</h3>
+
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    {["Local", "Retirada", "Entrega"].map((tipo) => (
+                      <button
+                        key={tipo}
+                        onClick={() => setForm((f) => ({ ...f, tipo }))}
+                        className="flex-1 rounded-full py-2 text-xs font-medium"
+                        style={
+                          form.tipo === tipo
+                            ? { background: "#A8201A", color: "#F7F1E5" }
+                            : { background: "#EDE4D0", color: "#1B1714" }
+                        }
+                      >
+                        {tipo}
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Seu nome"
+                    value={form.nome}
+                    onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm"
+                    style={{ border: "1px solid #EDE4D0", background: "#FFFFFF" }}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Telefone (com DDD)"
+                    value={form.telefone}
+                    onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm"
+                    style={{ border: "1px solid #EDE4D0", background: "#FFFFFF" }}
+                  />
+                  {form.tipo === "Entrega" && (
+                    <input
+                      type="text"
+                      placeholder="Endereço completo para entrega"
+                      value={form.endereco}
+                      onChange={(e) => setForm((f) => ({ ...f, endereco: e.target.value }))}
+                      className="w-full rounded-lg px-3.5 py-2.5 text-sm"
+                      style={{ border: "1px solid #EDE4D0", background: "#FFFFFF" }}
+                    />
+                  )}
+                  <textarea
+                    placeholder="Observações (opcional) — ex: sem cebola, troco para R$ 100..."
+                    value={form.observacoes}
+                    onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
+                    rows={2}
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm resize-none"
+                    style={{ border: "1px solid #EDE4D0", background: "#FFFFFF" }}
+                  />
+
+                  {erroEnvio && (
+                    <p className="text-xs font-medium" style={{ color: "#A8201A" }}>
+                      {erroEnvio}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="font-medium text-sm">Total</span>
+                    <span className="font-display text-lg font-semibold" style={{ color: "#A8201A" }}>
+                      R$ {formatPreco(totalPedido)}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={enviarPedido}
+                    disabled={enviando}
+                    className="w-full rounded-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+                    style={{ background: "#A8201A", color: "#F7F1E5", opacity: enviando ? 0.7 : 1 }}
+                  >
+                    {enviando ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} /> Confirmar pedido
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CONFIRMAÇÃO */}
+            {painel === "confirmado" && pedidoConfirmado && (
+              <div className="p-6 text-center">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                  style={{ background: "#E3EFE9" }}
+                >
+                  <CheckCircle2 size={28} style={{ color: "#2F6F5E" }} />
+                </div>
+                <h3 className="font-display text-xl font-semibold">Pedido recebido!</h3>
+                <p className="text-sm mt-1" style={{ color: "#7A6F5C" }}>
+                  {pedidoConfirmado.numero
+                    ? `Pedido #${pedidoConfirmado.numero}`
+                    : "Anote os detalhes abaixo"}{" "}
+                  · {pedidoConfirmado.tipo}
+                </p>
+
+                <div className="text-left mt-5 rounded-xl p-4" style={{ background: "#FFFFFF", border: "1px solid #EDE4D0" }}>
+                  {pedidoConfirmado.itens.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between text-sm py-1">
+                      <span>
+                        {c.quantidade}x {c.nome}
+                      </span>
+                      <span style={{ color: "#7A6F5C" }}>R$ {formatPreco(c.quantidade * c.preco)}</span>
+                    </div>
+                  ))}
+                  <div
+                    className="flex items-center justify-between pt-2 mt-2 text-sm font-semibold"
+                    style={{ borderTop: "1px solid #EDE4D0" }}
+                  >
+                    <span>Total</span>
+                    <span style={{ color: "#A8201A" }}>R$ {formatPreco(pedidoConfirmado.total)}</span>
+                  </div>
+                </div>
+
+                <p className="text-xs mt-4" style={{ color: "#7A6F5C" }}>
+                  Pagamento na {pedidoConfirmado.tipo === "Entrega" ? "entrega" : "retirada"}. Em breve o
+                  restaurante vai te chamar no telefone <strong>{pedidoConfirmado.telefone}</strong> para
+                  confirmar.
+                </p>
+
+                <button
+                  onClick={novoPedido}
+                  className="w-full mt-5 rounded-full py-3 text-sm font-semibold"
+                  style={{ background: "#1B1714", color: "#F7F1E5" }}
+                >
+                  Fazer novo pedido
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
