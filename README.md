@@ -111,9 +111,32 @@ create table pratos (
 
 ## FASE 3 — Acompanhamento do pedido + Painel da Cozinha
 
-### Passo 1 — Liberar as tabelas de pedidos no Supabase
+### Passo 1 — Criar as tabelas de pedidos no Supabase (se ainda não tiver feito)
 
 No SQL Editor do Supabase, rode:
+
+```sql
+create table pedidos (
+  id uuid primary key default gen_random_uuid(),
+  cliente_nome text,
+  cliente_telefone text,
+  tipo text check (tipo in ('local','viagem','entrega')),
+  endereco_entrega text,
+  status text default 'pendente',
+  total numeric(10,2),
+  criado_em timestamptz default now()
+);
+
+create table itens_pedido (
+  id uuid primary key default gen_random_uuid(),
+  pedido_id uuid references pedidos(id) on delete cascade,
+  prato_id uuid references pratos(id),
+  quantidade int default 1,
+  preco_unitario numeric(10,2)
+);
+```
+
+### Passo 2 — Liberar leitura/escrita dessas tabelas
 
 ```sql
 alter table pedidos enable row level security;
@@ -130,25 +153,15 @@ create policy "Ler itens do pedido" on itens_pedido for select to anon using (tr
 ⚠️ **Importante sobre segurança:** essas regras liberam leitura e atualização de pedidos pra qualquer
 um que tenha a chave pública do site (que já é pública por natureza). Isso é aceitável numa fase de
 teste, mas antes de operar com clientes reais o ideal é migrar pra autenticação de verdade (Supabase
-Auth) com uma conta só pra equipe da cozinha — me avise quando quiser evoluir isso.
+Auth) — me avise quando quiser evoluir isso.
 
-### Passo 2 — Painel da Cozinha
+### Passo 3 — Painel da Cozinha é um site separado
 
-Depois de subir esta atualização, o painel fica disponível em:
+O painel onde a cozinha vê e atualiza os pedidos **não fica aqui** — é outro projeto
+(`dragao-chines-cozinha`), com seu próprio repositório no GitHub e seu próprio link no Netlify.
+Veja o README dentro daquela pasta para o passo a passo de publicação dele.
 
-```
-https://SEU-SITE.netlify.app/cozinha
-```
-
-PIN padrão de entrada: **1234** (definido no início do arquivo `src/Cozinha.jsx`, na constante
-`PIN_COZINHA` — troque por outro número antes de divulgar o link pra equipe). De novo: isso é só uma
-trava simples contra acesso por acidente, não é uma senha de verdade.
-
-No painel, cada pedido mostra os itens, cliente, telefone, endereço (se for entrega) e total, com um
-botão para avançar o status: Recebido → Preparando → Pronto → Entregue. A lista atualiza sozinha a
-cada 5 segundos.
-
-### Como o cliente acompanha o pedido
+### Como o cliente acompanha o pedido (isso sim é aqui, neste site)
 
 Depois de fazer o pedido, o site mostra uma tela com 4 etapas (Recebido → Preparando → Pronto →
 Entregue) que atualiza automaticamente. Se a pessoa fechar a aba, ao reabrir o site nesse mesmo
