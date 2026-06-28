@@ -1,0 +1,482 @@
+{
+  "restaurante": {
+    "nome": "Restaurante Dragão Chinês",
+    "endereco": "Av. Anchieta - Ipiranga, Guarapari - ES, 29201-150",
+    "telefone": "(27) 3261-2717",
+    "horario": "Abre às 12:00",
+    "servicos": [
+      "Refeição no local",
+      "Para viagem",
+      "Entrega"
+    ]
+  },
+  "cardapio": [
+    {
+      "categoria": "Entrada",
+      "itens": [
+        {
+          "id": "ent-01",
+          "nome": "Filet de Peixe à Palito",
+          "descricao": "",
+          "preco": 100.0,
+          "imagem_url": null
+        },
+        {
+          "id": "ent-02",
+          "nome": "Camarão à Dorê",
+          "descricao": "",
+          "preco": 100.0,
+          "imagem_url": null
+        },
+        {
+          "id": "ent-03",
+          "nome": "Posta de Peixe Frito",
+          "descricao": "",
+          "preco": 110.0,
+          "imagem_url": null
+        },
+        {
+          "id": "ent-04",
+          "nome": "Rolinho Primavera",
+          "descricao": "",
+          "preco": 13.0,
+          "imagem_url": null
+        },
+        {
+          "id": "ent-05",
+          "nome": "Gyoza (10 unidades)",
+          "descricao": "",
+          "preco": 60.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Sopa",
+      "itens": [
+        {
+          "id": "sop-01",
+          "nome": "Sopa de Chop Suey",
+          "descricao": "",
+          "preco": 95.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Frango",
+      "itens": [
+        {
+          "id": "fra-01",
+          "nome": "Frango Xadrez à Moda da Casa",
+          "descricao": "Receita da casa",
+          "preco": 165.0,
+          "imagem_url": null
+        },
+        {
+          "id": "fra-02",
+          "nome": "Frango Xadrez com Molho Agridoce",
+          "descricao": "Molho agridoce da casa",
+          "preco": 165.0,
+          "imagem_url": null
+        },
+        {
+          "id": "fra-03",
+          "nome": "Frango em Fatias com Molho de Curry",
+          "descricao": "Curry e cebola",
+          "preco": 165.0,
+          "imagem_url": null
+        },
+        {
+          "id": "fra-04",
+          "nome": "Frango em Fatias e Verduras",
+          "descricao": "Legumes variados",
+          "preco": 165.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Filet Mignon",
+      "itens": [
+        {
+          "id": "fmi-01",
+          "nome": "Contra-Filet Simples",
+          "descricao": "",
+          "preco": 90.0,
+          "imagem_url": null
+        },
+        {
+          "id": "fmi-02",
+          "nome": "Filet Simples",
+          "descricao": "",
+          "preco": 100.0,
+          "imagem_url": null
+        },
+        {
+          "id": "fmi-03",
+          "nome": "Filet com Fritas e Arroz",
+          "descricao": "",
+          "preco": 180.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Filet de Frango",
+      "itens": [
+        {
+          "id": "ffr-01",
+          "nome": "Frango Grelhado com Fritas e Arroz",
+          "descricao": "",
+          "preco": 170.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Guarnições",
+      "itens": [
+        {
+          "id": "gua-01",
+          "nome": "Arroz",
+          "descricao": "",
+          "preco": 30.0,
+          "imagem_url": null
+        },
+        {
+          "id": "gua-02",
+          "nome": "Fritas",
+          "descricao": "",
+          "preco": 40.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Comida Chinesa",
+      "subtitulo": "Sugestão da Casa",
+      "itens": [
+        {
+          "id": "chi-01",
+          "nome": "Macarrão Bi-Fun",
+          "descricao": "Carne de porco, cenoura, repolho e legumes",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "chi-02",
+          "nome": "Frango Frito com Molho de Pequim",
+          "descricao": "Molho de gengibre",
+          "preco": 200.0,
+          "imagem_url": null
+        },
+        {
+          "id": "chi-03",
+          "nome": "Tepan Yaki na Chapa",
+          "descricao": "Contra-filé e verduras",
+          "preco": 210.0,
+          "imagem_url": null
+        },
+        {
+          "id": "chi-04",
+          "nome": "Tepan Yaki na Chapa",
+          "descricao": "Filet mignon e verduras",
+          "preco": 260.0,
+          "imagem_url": null
+        },
+        {
+          "id": "chi-05",
+          "nome": "Tepan Yaki na Chapa",
+          "descricao": "Frango e verduras",
+          "preco": 180.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Carne de Boi",
+      "itens": [
+        {
+          "id": "boi-01",
+          "nome": "Carne Desfiada Acebolada",
+          "descricao": "",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "boi-02",
+          "nome": "Carne Desfiada com Bambu",
+          "descricao": "",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "boi-03",
+          "nome": "Carne Desfiada com Bambu e Pimentão",
+          "descricao": "",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "boi-04",
+          "nome": "Carne em Fatias com Legumes",
+          "descricao": "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "boi-05",
+          "nome": "Carne em Fatias com Molho Curry",
+          "descricao": "Vagem e cebola",
+          "preco": 180.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Carne de Porco",
+      "itens": [
+        {
+          "id": "por-01",
+          "nome": "Carne de Porco em Fatias com Chop Suey",
+          "descricao": "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos",
+          "preco": 170.0,
+          "imagem_url": null
+        },
+        {
+          "id": "por-02",
+          "nome": "Porco Doce Azedo",
+          "descricao": "Cebola, cenoura, pimentão e abacaxi",
+          "preco": 170.0,
+          "imagem_url": null
+        },
+        {
+          "id": "por-03",
+          "nome": "Costela de Porco",
+          "descricao": "",
+          "preco": 120.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Peixe",
+      "itens": [
+        {
+          "id": "pei-01",
+          "nome": "Fatias de Peixe com Legumes",
+          "descricao": "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "pei-02",
+          "nome": "Fatias de Peixe com Azedo",
+          "descricao": "Filet de peixe frito, cebola, pimentão, cenoura e abacaxi",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "pei-03",
+          "nome": "Fatias de Peixe Empanado",
+          "descricao": "",
+          "preco": 170.0,
+          "preco_incerto": true,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Legumes",
+      "itens": [
+        {
+          "id": "leg-01",
+          "nome": "Misto de Verduras",
+          "descricao": "Repolho, couve-flor, bambu, cenoura, etc.",
+          "preco": 170.0,
+          "imagem_url": null
+        },
+        {
+          "id": "leg-02",
+          "nome": "Chop Suey de Carne Desfiada",
+          "descricao": "Repolho, pimentão, cenoura, cebola e bambu",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "leg-03",
+          "nome": "Chop Suey de Frango",
+          "descricao": "Repolho, pimentão, cenoura e bambu",
+          "preco": 170.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Arroz Colorido",
+      "itens": [
+        {
+          "id": "arr-01",
+          "nome": "Yakimeshi de Chop Suey",
+          "descricao": "",
+          "preco": 45.0,
+          "imagem_url": null
+        },
+        {
+          "id": "arr-02",
+          "nome": "Yakimeshi de Camarão",
+          "descricao": "",
+          "preco": 60.0,
+          "imagem_url": null
+        },
+        {
+          "id": "arr-03",
+          "nome": "Yakimeshi de Carne de Porco",
+          "descricao": "",
+          "preco": 55.0,
+          "imagem_url": null
+        },
+        {
+          "id": "arr-04",
+          "nome": "Yakimeshi de Carne de Boi",
+          "descricao": "",
+          "preco": 55.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Macarrão",
+      "itens": [
+        {
+          "id": "mac-01",
+          "nome": "Macarrão Frito com Chop Suey (Yakissoba)",
+          "descricao": "Carne de boi, camarão, frango, brócolis, couve-flor, cenoura e acelga",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "mac-02",
+          "nome": "Chop Suey de Carne Desfiada",
+          "descricao": "Repolho, pimentão, cenoura, cebola e bambu",
+          "preco": 180.0,
+          "imagem_url": null
+        },
+        {
+          "id": "mac-03",
+          "nome": "Chop Suey de Frango",
+          "descricao": "Repolho, pimentão, cenoura e bambu",
+          "preco": 170.0,
+          "imagem_url": null
+        },
+        {
+          "id": "mac-04",
+          "nome": "Meia Porção de Macarrão Frito com Chop Suey",
+          "descricao": "",
+          "preco": 105.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Bebidas",
+      "itens": [
+        {
+          "id": "beb-01",
+          "nome": "Suco Bendito Fruto",
+          "descricao": "",
+          "preco": 15.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-02",
+          "nome": "Refrigerante Lata",
+          "descricao": "",
+          "preco": 9.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-03",
+          "nome": "Refrigerante 600ml",
+          "descricao": "",
+          "preco": 10.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-04",
+          "nome": "Refrigerante 1,5L",
+          "descricao": "",
+          "preco": 15.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-05",
+          "nome": "Schweppes",
+          "descricao": "",
+          "preco": 10.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-06",
+          "nome": "Água",
+          "descricao": "",
+          "preco": 5.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-07",
+          "nome": "Água Tônica",
+          "descricao": "",
+          "preco": 10.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-08",
+          "nome": "H2O",
+          "descricao": "",
+          "preco": 10.0,
+          "imagem_url": null
+        },
+        {
+          "id": "beb-09",
+          "nome": "Cerveja Latão",
+          "descricao": "",
+          "preco": 10.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Saquê",
+      "itens": [
+        {
+          "id": "saq-01",
+          "nome": "Saquê",
+          "descricao": "",
+          "preco": 30.0,
+          "imagem_url": null
+        },
+        {
+          "id": "saq-02",
+          "nome": "Saquê Quente",
+          "descricao": "",
+          "preco": 35.0,
+          "imagem_url": null
+        }
+      ]
+    },
+    {
+      "categoria": "Sobremesa",
+      "itens": [
+        {
+          "id": "sob-01",
+          "nome": "Caramelados",
+          "descricao": "Maçã, banana e abacaxi",
+          "preco": 35.0,
+          "imagem_url": null
+        }
+      ]
+    }
+  ]
+}

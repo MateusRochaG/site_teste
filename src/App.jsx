@@ -1,0 +1,493 @@
+import React, { useState, useMemo } from "react";
+import {
+  Phone,
+  MapPin,
+  Clock,
+  UtensilsCrossed,
+  Bike,
+  ShoppingBag,
+  ChevronRight,
+  Soup,
+  Drumstick,
+  Beef,
+  ChefHat,
+  Fish,
+  Salad,
+  Wheat,
+  CookingPot,
+  GlassWater,
+  Wine,
+  Cookie,
+  ImageOff,
+} from "lucide-react";
+
+// Ícone + cor de apoio para cada categoria. Usado como "foto provisória"
+// enquanto o restaurante não tem fotos reais dos pratos.
+const CATEGORIA_VISUAL = {
+  Entrada: { icon: UtensilsCrossed, bg: "#FBF3DE", fg: "#A8201A" },
+  Sopa: { icon: Soup, bg: "#FBF3DE", fg: "#A8201A" },
+  Frango: { icon: Drumstick, bg: "#FCEFD1", fg: "#C9A227" },
+  "Filet Mignon": { icon: Beef, bg: "#F6DEDB", fg: "#A8201A" },
+  "Filet de Frango": { icon: Drumstick, bg: "#FCEFD1", fg: "#C9A227" },
+  Guarnições: { icon: Wheat, bg: "#FCEFD1", fg: "#C9A227" },
+  "Comida Chinesa": { icon: CookingPot, bg: "#F6DEDB", fg: "#A8201A" },
+  "Carne de Boi": { icon: Beef, bg: "#F6DEDB", fg: "#A8201A" },
+  "Carne de Porco": { icon: ChefHat, bg: "#F6DEDB", fg: "#A8201A" },
+  Peixe: { icon: Fish, bg: "#E3EFE9", fg: "#2F6F5E" },
+  Legumes: { icon: Salad, bg: "#E3EFE9", fg: "#2F6F5E" },
+  "Arroz Colorido": { icon: Wheat, bg: "#FCEFD1", fg: "#C9A227" },
+  Macarrão: { icon: CookingPot, bg: "#FCEFD1", fg: "#C9A227" },
+  Bebidas: { icon: GlassWater, bg: "#E3EFE9", fg: "#2F6F5E" },
+  Saquê: { icon: Wine, bg: "#E3EFE9", fg: "#2F6F5E" },
+  Sobremesa: { icon: Cookie, bg: "#FBF3DE", fg: "#A8201A" },
+};
+
+function defaultVisual() {
+  return { icon: ImageOff, bg: "#EDE4D0", fg: "#7A6F5C" };
+}
+
+const RESTAURANTE = {
+  nome: "Restaurante Dragão Chinês",
+  endereco: "Av. Anchieta - Ipiranga, Guarapari - ES, 29201-150",
+  telefone: "(27) 3261-2717",
+  horario: "Abre às 12:00",
+  servicos: [
+    { label: "Refeição no local", icon: UtensilsCrossed },
+    { label: "Para viagem", icon: ShoppingBag },
+    { label: "Entrega", icon: Bike },
+  ],
+};
+
+const CARDAPIO = [
+  {
+    categoria: "Entrada",
+    itens: [
+      { nome: "Filet de Peixe à Palito", preco: 100 },
+      { nome: "Camarão à Dorê", preco: 100 },
+      { nome: "Posta de Peixe Frito", preco: 110 },
+      { nome: "Rolinho Primavera", preco: 13 },
+      { nome: "Gyoza (10 unidades)", preco: 60 },
+    ],
+  },
+  {
+    categoria: "Sopa",
+    itens: [{ nome: "Sopa de Chop Suey", preco: 95 }],
+  },
+  {
+    categoria: "Frango",
+    itens: [
+      { nome: "Frango Xadrez à Moda da Casa", descricao: "Receita da casa", preco: 165 },
+      { nome: "Frango Xadrez com Molho Agridoce", descricao: "Molho agridoce da casa", preco: 165 },
+      { nome: "Frango em Fatias com Molho de Curry", descricao: "Curry e cebola", preco: 165 },
+      { nome: "Frango em Fatias e Verduras", descricao: "Legumes variados", preco: 165 },
+    ],
+  },
+  {
+    categoria: "Filet Mignon",
+    itens: [
+      { nome: "Contra-Filet Simples", preco: 90 },
+      { nome: "Filet Simples", preco: 100 },
+      { nome: "Filet com Fritas e Arroz", preco: 180 },
+    ],
+  },
+  {
+    categoria: "Filet de Frango",
+    itens: [{ nome: "Frango Grelhado com Fritas e Arroz", preco: 170 }],
+  },
+  {
+    categoria: "Guarnições",
+    itens: [
+      { nome: "Arroz", preco: 30 },
+      { nome: "Fritas", preco: 40 },
+    ],
+  },
+  {
+    categoria: "Comida Chinesa",
+    subtitulo: "Sugestão da casa",
+    itens: [
+      { nome: "Macarrão Bi-Fun", descricao: "Carne de porco, cenoura, repolho e legumes", preco: 180 },
+      { nome: "Frango Frito com Molho de Pequim", descricao: "Molho de gengibre", preco: 200 },
+      { nome: "Tepan Yaki na Chapa", descricao: "Contra-filé e verduras", preco: 210 },
+      { nome: "Tepan Yaki na Chapa", descricao: "Filet mignon e verduras", preco: 260 },
+      { nome: "Tepan Yaki na Chapa", descricao: "Frango e verduras", preco: 180 },
+    ],
+  },
+  {
+    categoria: "Carne de Boi",
+    itens: [
+      { nome: "Carne Desfiada Acebolada", preco: 180 },
+      { nome: "Carne Desfiada com Bambu", preco: 180 },
+      { nome: "Carne Desfiada com Bambu e Pimentão", preco: 180 },
+      { nome: "Carne em Fatias com Legumes", descricao: "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos", preco: 180 },
+      { nome: "Carne em Fatias com Molho Curry", descricao: "Vagem e cebola", preco: 180 },
+    ],
+  },
+  {
+    categoria: "Carne de Porco",
+    itens: [
+      { nome: "Carne de Porco em Fatias com Chop Suey", descricao: "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos", preco: 170 },
+      { nome: "Porco Doce Azedo", descricao: "Cebola, cenoura, pimentão e abacaxi", preco: 170 },
+      { nome: "Costela de Porco", preco: 120 },
+    ],
+  },
+  {
+    categoria: "Peixe",
+    itens: [
+      { nome: "Fatias de Peixe com Legumes", descricao: "Acelga, cenoura, brócolis, couve-flor, bambu e cogumelos", preco: 180 },
+      { nome: "Fatias de Peixe com Azedo", descricao: "Filet de peixe frito, cebola, pimentão, cenoura e abacaxi", preco: 180 },
+      { nome: "Fatias de Peixe Empanado", preco: 170 },
+    ],
+  },
+  {
+    categoria: "Legumes",
+    itens: [
+      { nome: "Misto de Verduras", descricao: "Repolho, couve-flor, bambu, cenoura, etc.", preco: 170 },
+      { nome: "Chop Suey de Carne Desfiada", descricao: "Repolho, pimentão, cenoura, cebola e bambu", preco: 180 },
+      { nome: "Chop Suey de Frango", descricao: "Repolho, pimentão, cenoura e bambu", preco: 170 },
+    ],
+  },
+  {
+    categoria: "Arroz Colorido",
+    itens: [
+      { nome: "Yakimeshi de Chop Suey", preco: 45 },
+      { nome: "Yakimeshi de Camarão", preco: 60 },
+      { nome: "Yakimeshi de Carne de Porco", preco: 55 },
+      { nome: "Yakimeshi de Carne de Boi", preco: 55 },
+    ],
+  },
+  {
+    categoria: "Macarrão",
+    itens: [
+      { nome: "Macarrão Frito com Chop Suey (Yakissoba)", descricao: "Carne de boi, camarão, frango, brócolis, couve-flor, cenoura e acelga", preco: 180 },
+      { nome: "Chop Suey de Carne Desfiada", descricao: "Repolho, pimentão, cenoura, cebola e bambu", preco: 180 },
+      { nome: "Chop Suey de Frango", descricao: "Repolho, pimentão, cenoura e bambu", preco: 170 },
+      { nome: "Meia Porção de Macarrão Frito com Chop Suey", preco: 105 },
+    ],
+  },
+  {
+    categoria: "Bebidas",
+    itens: [
+      { nome: "Suco Bendito Fruto", preco: 15 },
+      { nome: "Refrigerante Lata", preco: 9 },
+      { nome: "Refrigerante 600ml", preco: 10 },
+      { nome: "Refrigerante 1,5L", preco: 15 },
+      { nome: "Schweppes", preco: 10 },
+      { nome: "Água", preco: 5 },
+      { nome: "Água Tônica", preco: 10 },
+      { nome: "H2O", preco: 10 },
+      { nome: "Cerveja Latão", preco: 10 },
+    ],
+  },
+  {
+    categoria: "Saquê",
+    itens: [
+      { nome: "Saquê", preco: 30 },
+      { nome: "Saquê Quente", preco: 35 },
+    ],
+  },
+  {
+    categoria: "Sobremesa",
+    itens: [{ nome: "Caramelados", descricao: "Maçã, banana e abacaxi", preco: 35 }],
+  },
+];
+
+function formatPreco(v) {
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+}
+
+function DragonDivider() {
+  return (
+    <svg viewBox="0 0 1200 60" className="w-full h-8" preserveAspectRatio="none">
+      <path
+        d="M0 30 C 60 5, 120 55, 180 30 S 300 5, 360 30 S 480 55, 540 30 S 660 5, 720 30 S 840 55, 900 30 S 1020 5, 1080 30 S 1170 50, 1200 30"
+        fill="none"
+        stroke="#C9A227"
+        strokeWidth="2"
+        opacity="0.7"
+      />
+      <circle cx="40" cy="22" r="3" fill="#C9A227" />
+      <circle cx="1160" cy="22" r="3" fill="#C9A227" />
+    </svg>
+  );
+}
+
+export default function DragaoChinesSite() {
+  const categorias = useMemo(() => CARDAPIO.map((c) => c.categoria), []);
+  const [ativo, setAtivo] = useState(categorias[0]);
+  const grupoAtivo = CARDAPIO.find((c) => c.categoria === ativo);
+
+  const telefoneDigits = "552732612717";
+
+  return (
+    <div
+      className="min-h-screen w-full"
+      style={{ background: "#F7F1E5", fontFamily: "'Work Sans', sans-serif", color: "#1B1714" }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
+        .font-display { font-family: 'Fraunces', serif; }
+        ::selection { background: #C9A227; color: #1B1714; }
+      `}</style>
+
+      {/* NAV */}
+      <header className="sticky top-0 z-30 backdrop-blur" style={{ background: "rgba(27,23,20,0.95)" }}>
+        <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <DragonMark />
+            <span className="font-display text-lg tracking-wide" style={{ color: "#F7F1E5" }}>
+              Dragão Chinês
+            </span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-sm" style={{ color: "#C9A227" }}>
+            <Clock size={15} />
+            <span>{RESTAURANTE.horario}</span>
+          </div>
+          <a
+            href={`tel:${telefoneDigits}`}
+            className="flex items-center gap-1.5 text-sm font-medium rounded-full px-3 py-1.5"
+            style={{ background: "#A8201A", color: "#F7F1E5" }}
+          >
+            <Phone size={14} /> Ligar
+          </a>
+        </div>
+      </header>
+
+      {/* HERO */}
+      <section
+        className="relative px-5 pt-16 pb-14 text-center overflow-hidden"
+        style={{ background: "#1B1714" }}
+      >
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            background:
+              "radial-gradient(circle at 80% 20%, #A8201A 0%, transparent 45%), radial-gradient(circle at 15% 85%, #C9A227 0%, transparent 35%)",
+          }}
+        />
+        <div className="relative max-w-2xl mx-auto">
+          <DragonMark size={56} />
+          <h1
+            className="font-display mt-5 text-4xl sm:text-5xl font-semibold leading-tight"
+            style={{ color: "#F7F1E5" }}
+          >
+            Restaurante Dragão Chinês
+          </h1>
+          <p className="mt-3 text-base sm:text-lg" style={{ color: "#D8CDB8" }}>
+            Sabores chineses tradicionais em Guarapari, no chapa, no vapor e no caldeirão.
+          </p>
+          <div
+            className="inline-flex items-center gap-2 mt-6 rounded-full px-4 py-2 text-sm font-medium"
+            style={{ background: "rgba(201,162,39,0.15)", color: "#C9A227", border: "1px solid rgba(201,162,39,0.4)" }}
+          >
+            <Clock size={15} /> {RESTAURANTE.horario}
+          </div>
+          <div className="mt-7">
+            <a
+              href="#cardapio"
+              className="inline-flex items-center gap-1.5 rounded-full px-6 py-3 text-sm font-semibold"
+              style={{ background: "#C9A227", color: "#1B1714" }}
+            >
+              Ver cardápio <ChevronRight size={16} />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <div style={{ background: "#1B1714" }}>
+        <DragonDivider />
+      </div>
+
+      {/* CARDÁPIO */}
+      <section id="cardapio" className="px-5 py-12 max-w-5xl mx-auto">
+        <h2 className="font-display text-3xl font-semibold text-center" style={{ color: "#A8201A" }}>
+          Cardápio
+        </h2>
+        <p className="text-center text-sm mt-1.5" style={{ color: "#5C5346" }}>
+          Toque em uma categoria para ver os pratos
+        </p>
+
+        {/* category pills */}
+        <div className="flex gap-2 overflow-x-auto mt-6 pb-2 -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center">
+          {categorias.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setAtivo(cat)}
+              className="shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors"
+              style={
+                ativo === cat
+                  ? { background: "#A8201A", color: "#F7F1E5" }
+                  : { background: "#EDE4D0", color: "#1B1714" }
+              }
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* items */}
+        {grupoAtivo && (
+          <div className="mt-7">
+            <div className="flex items-center gap-3 mb-4">
+              {(() => {
+                const visual = CATEGORIA_VISUAL[grupoAtivo.categoria] || defaultVisual();
+                const Icon = visual.icon;
+                return (
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: visual.bg }}
+                  >
+                    <Icon size={20} style={{ color: visual.fg }} />
+                  </div>
+                );
+              })()}
+              <div className="flex items-baseline gap-2">
+                <h3 className="font-display text-2xl font-semibold">{grupoAtivo.categoria}</h3>
+                {grupoAtivo.subtitulo && (
+                  <span className="text-xs uppercase tracking-wide" style={{ color: "#2F6F5E" }}>
+                    {grupoAtivo.subtitulo}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {grupoAtivo.itens.map((item, i) => {
+                const visual = CATEGORIA_VISUAL[grupoAtivo.categoria] || defaultVisual();
+                const Icon = visual.icon;
+                return (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-xl px-4 py-3.5"
+                    style={{ background: "#FFFFFF", border: "1px solid #EDE4D0" }}
+                  >
+                    {item.imagemUrl ? (
+                      <img
+                        src={item.imagemUrl}
+                        alt={item.nome}
+                        className="shrink-0 w-14 h-14 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="shrink-0 w-14 h-14 rounded-lg flex items-center justify-center"
+                        style={{ background: visual.bg }}
+                        aria-hidden="true"
+                      >
+                        <Icon size={22} style={{ color: visual.fg }} />
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between gap-3 flex-1">
+                      <div>
+                        <p className="font-medium leading-snug">{item.nome}</p>
+                        {item.descricao && (
+                          <p className="text-xs mt-0.5" style={{ color: "#7A6F5C" }}>
+                            {item.descricao}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className="shrink-0 font-display text-sm font-semibold rounded-full px-2.5 py-1"
+                        style={{ background: "#FBF3DE", color: "#A8201A" }}
+                      >
+                        R$ {formatPreco(item.preco)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="px-5">
+        <DragonDivider />
+      </div>
+
+      {/* SOBRE / CONTATO */}
+      <section id="contato" className="px-5 py-12 max-w-5xl mx-auto">
+        <h2 className="font-display text-3xl font-semibold text-center" style={{ color: "#A8201A" }}>
+          Sobre &amp; Contato
+        </h2>
+
+        <div className="grid sm:grid-cols-3 gap-3 mt-7">
+          {RESTAURANTE.servicos.map(({ label, icon: Icon }) => (
+            <div
+              key={label}
+              className="flex flex-col items-center gap-2 rounded-xl py-5 px-3 text-center"
+              style={{ background: "#FFFFFF", border: "1px solid #EDE4D0" }}
+            >
+              <div
+                className="rounded-full p-2.5"
+                style={{ background: "#EAF2EE", color: "#2F6F5E" }}
+              >
+                <Icon size={20} />
+              </div>
+              <span className="text-sm font-medium">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 rounded-xl p-5 sm:p-6" style={{ background: "#1B1714", color: "#F7F1E5" }}>
+          <div className="flex items-start gap-3">
+            <MapPin size={18} style={{ color: "#C9A227" }} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#C9A227" }}>
+                Endereço
+              </p>
+              <p className="text-sm mt-0.5" style={{ color: "#D8CDB8" }}>
+                {RESTAURANTE.endereco}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 mt-4">
+            <Phone size={18} style={{ color: "#C9A227" }} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#C9A227" }}>
+                Telefone
+              </p>
+              <a href={`tel:${telefoneDigits}`} className="text-sm mt-0.5 block" style={{ color: "#D8CDB8" }}>
+                {RESTAURANTE.telefone}
+              </a>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 mt-4">
+            <Clock size={18} style={{ color: "#C9A227" }} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "#C9A227" }}>
+                Horário
+              </p>
+              <p className="text-sm mt-0.5" style={{ color: "#D8CDB8" }}>
+                {RESTAURANTE.horario}
+              </p>
+            </div>
+          </div>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(RESTAURANTE.endereco)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 mt-5 rounded-full px-4 py-2 text-sm font-medium"
+            style={{ background: "#C9A227", color: "#1B1714" }}
+          >
+            Ver no mapa <ChevronRight size={14} />
+          </a>
+        </div>
+      </section>
+
+      <footer className="text-center text-xs py-6" style={{ color: "#9A8F7B" }}>
+        Restaurante Dragão Chinês — protótipo de site
+      </footer>
+    </div>
+  );
+}
+
+function DragonMark({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+      <path
+        d="M8 40c4-10 14-18 24-16 6 1.3 8 6 13 6 3 0 5-2 7-5-1 7-5 11-10 11-5 0-7-3-11-3-7 0-13 6-15 13-2-2-6-3-8-6z"
+        fill="#A8201A"
+      />
+      <circle cx="46" cy="22" r="2.4" fill="#C9A227" />
+      <path d="M8 40c4 4 9 6 14 5" stroke="#C9A227" strokeWidth="1.4" fill="none" />
+    </svg>
+  );
+}
