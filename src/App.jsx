@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Phone,
   MapPin,
@@ -20,6 +20,7 @@ import {
   Cookie,
   ImageOff,
 } from "lucide-react";
+import { supabase } from "./supabaseClient";
 
 // Ícone + cor de apoio para cada categoria. Usado como "foto provisória"
 // enquanto o restaurante não tem fotos reais dos pratos.
@@ -58,7 +59,9 @@ const RESTAURANTE = {
   ],
 };
 
-const CARDAPIO = [
+// Usado caso o Supabase ainda não esteja configurado, ou se a busca falhar
+// (assim o site nunca fica "vazio" pro visitante).
+const CARDAPIO_FALLBACK = [
   {
     categoria: "Entrada",
     itens: [
@@ -211,10 +214,58 @@ function DragonDivider() {
   );
 }
 
+// Busca o cardápio no Supabase (tabelas categorias + pratos) e converte
+// pro mesmo formato usado no resto do componente. Se o Supabase não estiver
+// configurado (.env vazio) ou a busca falhar, devolve null e o site usa o
+// CARDAPIO_FALLBACK acima, sem quebrar.
+async function buscarCardapioDoSupabase() {
+  if (!supabase) return null;
+
+  const { data: categorias, error: erroCategorias } = await supabase
+    .from("categorias")
+    .select("id, nome, subtitulo, ordem")
+    .order("ordem");
+
+  if (erroCategorias || !categorias) return null;
+
+  const { data: pratos, error: erroPratos } = await supabase
+    .from("pratos")
+    .select("id, categoria_id, nome, descricao, preco, imagem_url, disponivel, ordem")
+    .eq("disponivel", true)
+    .order("ordem");
+
+  if (erroPratos || !pratos) return null;
+
+  return categorias.map((cat) => ({
+    categoria: cat.nome,
+    subtitulo: cat.subtitulo || undefined,
+    itens: pratos
+      .filter((p) => p.categoria_id === cat.id)
+      .map((p) => ({
+        nome: p.nome,
+        descricao: p.descricao || undefined,
+        preco: Number(p.preco),
+        imagemUrl: p.imagem_url || undefined,
+      })),
+  }));
+}
+
 export default function DragaoChinesSite() {
-  const categorias = useMemo(() => CARDAPIO.map((c) => c.categoria), []);
+  const [cardapio, setCardapio] = useState(CARDAPIO_FALLBACK);
+  const [carregando, setCarregando] = useState(true);
+  const categorias = useMemo(() => cardapio.map((c) => c.categoria), [cardapio]);
   const [ativo, setAtivo] = useState(categorias[0]);
-  const grupoAtivo = CARDAPIO.find((c) => c.categoria === ativo);
+  const grupoAtivo = cardapio.find((c) => c.categoria === ativo);
+
+  useEffect(() => {
+    buscarCardapioDoSupabase().then((resultado) => {
+      if (resultado && resultado.length > 0) {
+        setCardapio(resultado);
+        setAtivo(resultado[0].categoria);
+      }
+      setCarregando(false);
+    });
+  }, []);
 
   const telefoneDigits = "552732612717";
 
@@ -304,6 +355,7 @@ export default function DragaoChinesSite() {
         </h2>
         <p className="text-center text-sm mt-1.5" style={{ color: "#5C5346" }}>
           Toque em uma categoria para ver os pratos
+          {carregando && <span className="block mt-1 italic">Carregando cardápio…</span>}
         </p>
 
         {/* category pills */}
